@@ -99,6 +99,54 @@ async fn day_4_contest(reindeer: web::Json<Vec<Reindeer>>) -> Result<impl Respon
     })))
 }
 
+#[post("/6")]
+async fn day_6(body: web::Bytes) -> Result<impl Responder> {
+    let mut elf_on_shelf_count = 0;
+
+    let doc: Vec<_> = body
+        .windows(3)
+        .enumerate()
+        .filter_map(|(pos, chunk)| {
+            if String::from_utf8(chunk.to_vec()).unwrap_or_default() == "elf" {
+                if String::from_utf8(body.slice(pos..).to_vec())
+                    .unwrap_or_default()
+                    .starts_with("elf on a shelf")
+                {
+                    elf_on_shelf_count += 1;
+                }
+
+                return Some("elf");
+            }
+            None
+        })
+        .collect();
+
+    let shelves: Vec<_> = body
+        .windows(5)
+        .enumerate()
+        .filter_map(|(pos, chunk)| {
+            if String::from_utf8(chunk.to_vec()).unwrap_or_default() == "shelf" {
+                if (String::from_utf8(body.slice(..pos).to_vec()))
+                    .unwrap_or_default()
+                    .ends_with("elf on a ")
+                {
+                    return Some("elf on a shelf");
+                }
+            }
+            None
+        })
+        .collect();
+
+    let elf_count = doc.len();
+    let shelf_no_elf_count = shelves.len();
+
+    Ok(web::Json(json!({
+        "elf": elf_count,
+        "elf on a shelf": elf_on_shelf_count,
+        "shelf with no elf on it": shelf_no_elf_count
+    })))
+}
+
 #[shuttle_runtime::main]
 async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let config = move |cfg: &mut ServiceConfig| {
@@ -106,6 +154,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         cfg.service(day_1);
         cfg.service(day_4_strength);
         cfg.service(day_4_contest);
+        cfg.service(day_6);
     };
 
     Ok(config.into())
