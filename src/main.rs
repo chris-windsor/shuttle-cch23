@@ -221,6 +221,42 @@ async fn day_7_bake(req: HttpRequest) -> Result<impl Responder> {
     })))
 }
 
+#[derive(Deserialize)]
+struct Pokemon {
+    weight: u32,
+}
+
+async fn get_pokemon_by_id(id: u32) -> Pokemon {
+    let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon/{}", id))
+        .await
+        .expect("make request");
+    let pokemon = pokemon.json::<Pokemon>().await.expect("parse json");
+
+    pokemon
+}
+
+#[get("/8/weight/{pokedex_number}")]
+async fn day_8_weight(path: web::Path<u32>) -> impl Responder {
+    let pokedex_number = path.into_inner();
+
+    let pokemon = get_pokemon_by_id(pokedex_number).await;
+
+    HttpResponse::Ok().body((pokemon.weight / 10).to_string())
+}
+
+#[get("/8/drop/{pokedex_number}")]
+async fn day_8_drop(path: web::Path<u32>) -> impl Responder {
+    let pokedex_number = path.into_inner();
+
+    let pokemon = get_pokemon_by_id(pokedex_number).await;
+
+    let time = f32::sqrt(2.0 * 10.0 / 9.825);
+    let velocity = 9.825 * time;
+    let momentum: f32 = (pokemon.weight as f32) * velocity / 10.0;
+
+    HttpResponse::Ok().body(momentum.to_string())
+}
+
 #[shuttle_runtime::main]
 async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let config = move |cfg: &mut ServiceConfig| {
@@ -231,6 +267,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         cfg.service(day_6);
         cfg.service(day_7_decode);
         cfg.service(day_7_bake);
+        cfg.service(day_8_weight);
+        cfg.service(day_8_drop);
     };
 
     Ok(config.into())
