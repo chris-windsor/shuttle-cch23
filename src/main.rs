@@ -12,6 +12,11 @@ use serde::Deserialize;
 use serde_json::json;
 use shuttle_actix_web::ShuttleActixWeb;
 
+#[get("/")]
+async fn base() -> impl Responder {
+    HttpResponse::Ok()
+}
+
 #[get("/-1/error")]
 async fn fake_error() -> impl Responder {
     HttpResponse::InternalServerError()
@@ -104,27 +109,20 @@ async fn day_4_contest(reindeer: web::Json<Vec<Reindeer>>) -> Result<impl Respon
 
 #[post("/6")]
 async fn day_6(body: web::Bytes) -> Result<impl Responder> {
-    let mut elf_on_shelf_count = 0;
-
     let doc: Vec<_> = body
         .windows(3)
         .enumerate()
-        .filter_map(|(pos, chunk)| {
+        .filter_map(|(_pos, chunk)| {
             if String::from_utf8(chunk.to_vec()).unwrap_or_default() == "elf" {
-                if String::from_utf8(body.slice(pos..).to_vec())
-                    .unwrap_or_default()
-                    .starts_with("elf on a shelf")
-                {
-                    elf_on_shelf_count += 1;
-                }
-
                 return Some("elf");
             }
             None
         })
         .collect();
 
-    let shelves: Vec<_> = body
+    let elf_count = doc.len();
+
+    let (elf_on_shelf_count, shelf_no_elf_count) = body
         .windows(5)
         .enumerate()
         .filter_map(|(pos, chunk)| {
@@ -133,15 +131,17 @@ async fn day_6(body: web::Bytes) -> Result<impl Responder> {
                     .unwrap_or_default()
                     .ends_with("elf on a ")
                 {
-                    return Some("elf on a shelf");
+                    return Some(&true);
+                } else {
+                    return Some(&false);
                 }
             }
             None
         })
-        .collect();
-
-    let elf_count = doc.len();
-    let shelf_no_elf_count = shelves.len();
+        .fold((0, 0), |(yay, nay), cur| {
+            // woah. cool
+            (yay + (cur == &true) as i32, nay + (cur == &false) as i32)
+        });
 
     Ok(web::Json(json!({
         "elf": elf_count,
@@ -182,10 +182,12 @@ async fn day_7_bake(req: HttpRequest) -> Result<impl Responder> {
 
     let mut calc: Vec<_> = recipe
         .iter()
+        // get rid of ingredients that are listed but have 0 qty
+        .filter(|(_item, qty)| qty.as_i64().unwrap() > 0)
         .map(|(item, qty)| {
             (
                 item,
-                &pantry
+                pantry
                     .get(item)
                     .unwrap_or(&serde_json::Value::from(0))
                     .as_u64()
@@ -223,7 +225,7 @@ async fn day_7_bake(req: HttpRequest) -> Result<impl Responder> {
 
 #[derive(Deserialize)]
 struct Pokemon {
-    weight: u32,
+    weight: f32,
 }
 
 async fn get_pokemon_by_id(id: u32) -> Pokemon {
@@ -241,7 +243,7 @@ async fn day_8_weight(path: web::Path<u32>) -> impl Responder {
 
     let pokemon = get_pokemon_by_id(pokedex_number).await;
 
-    HttpResponse::Ok().body((pokemon.weight / 10).to_string())
+    HttpResponse::Ok().body((pokemon.weight / 10.0).to_string())
 }
 
 #[get("/8/drop/{pokedex_number}")]
@@ -260,6 +262,7 @@ async fn day_8_drop(path: web::Path<u32>) -> impl Responder {
 #[shuttle_runtime::main]
 async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let config = move |cfg: &mut ServiceConfig| {
+        cfg.service(base);
         cfg.service(fake_error);
         cfg.service(day_1);
         cfg.service(day_4_strength);
