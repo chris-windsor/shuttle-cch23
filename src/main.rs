@@ -9,6 +9,7 @@ use actix_web::{
     web::{self, ServiceConfig},
     HttpRequest, HttpResponse, Responder, Result,
 };
+use askama::Template;
 use base64::{engine::general_purpose, Engine};
 use chrono::{DateTime, Datelike, NaiveTime, Utc, Weekday};
 use image::GenericImageView;
@@ -465,6 +466,39 @@ async fn day_13_popular(data: web::Data<AppState>) -> Result<impl Responder> {
     })))
 }
 
+#[derive(Deserialize)]
+struct HtmlReq {
+    content: String,
+}
+
+#[derive(Template)]
+#[template(path = "day14.html", escape = "none")]
+struct Day14UnsafeTemplate {
+    content: String,
+}
+
+#[derive(Template)]
+#[template(path = "day14.html")]
+struct Day14SafeTemplate {
+    content: String,
+}
+
+#[post("/14/unsafe")]
+async fn day_14_unsafe(body: web::Json<HtmlReq>) -> impl Responder {
+    let body = body.into_inner();
+    let content = body.content;
+
+    Day14UnsafeTemplate { content: content }
+}
+
+#[post("/14/safe")]
+async fn day_14_safe(body: web::Json<HtmlReq>) -> impl Responder {
+    let body = body.into_inner();
+    let content = body.content;
+
+    Day14SafeTemplate { content: content }
+}
+
 struct AppState {
     persist: PersistInstance,
     pool: PgPool,
@@ -497,6 +531,8 @@ async fn main(
         cfg.service(day_13_create_orders);
         cfg.service(day_13_orders_total);
         cfg.service(day_13_popular);
+        cfg.service(day_14_unsafe);
+        cfg.service(day_14_safe);
 
         // 32MB
         cfg.app_data(web::PayloadConfig::new(1 << 25));
