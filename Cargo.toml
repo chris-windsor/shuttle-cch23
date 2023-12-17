@@ -11,10 +11,14 @@ askama = { version = "0.12.1", features = ["with-actix-web"] }
 askama_actix = "0.14.0"
 base64 = "0.21.5"
 chrono = "0.4.31"
+derive_more = "0.99.17"
+hex = "0.4.3"
 image = "0.24.7"
+regex = "1.10.2"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
+sha2 = "0.10.8"
 shuttle-actix-web = "0.35.0"
 shuttle-persist = "0.35.0"
 shuttle-runtime = "0.35.0"
