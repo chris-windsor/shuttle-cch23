@@ -180,7 +180,7 @@ async fn day_7_decode(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok().body(recipe)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct BakeOrder {
     recipe: serde_json::Value,
     pantry: serde_json::Value,
@@ -389,7 +389,7 @@ async fn day_13_select(data: web::Data<AppState>) -> impl Responder {
 async fn day_13_reset(data: web::Data<AppState>) -> impl Responder {
     let _ = &data
         .pool
-        .execute(include_str!("../day13schema.sql"))
+        .execute(include_str!("../schemas/day13schema.sql"))
         .await
         .expect("do sql");
 
@@ -551,9 +551,7 @@ impl error::ResponseError for NiceError {
     }
 
     fn status_code(&self) -> StatusCode {
-        match *self {
-            _ => StatusCode::BAD_REQUEST,
-        }
+        StatusCode::BAD_REQUEST
     }
 }
 
@@ -569,13 +567,11 @@ impl error::ResponseError for GameError {
 
     fn status_code(&self) -> StatusCode {
         match *self {
-            // 15pt2
             GameError::NotJoyfulEnough => StatusCode::NOT_ACCEPTABLE,
             GameError::NoSandwich => StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS,
             GameError::Outranged => StatusCode::RANGE_NOT_SATISFIABLE,
             GameError::ShockingEmoji => StatusCode::UPGRADE_REQUIRED,
             GameError::NotACoffeeBrewer => StatusCode::IM_A_TEAPOT,
-
             _ => StatusCode::BAD_REQUEST,
         }
     }
