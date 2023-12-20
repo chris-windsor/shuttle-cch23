@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use actix::{Actor, StreamHandler};
 use actix_files::NamedFile;
 use actix_multipart::form::{bytes::Bytes, MultipartForm};
 use actix_web::{
@@ -10,8 +11,9 @@ use actix_web::{
     },
     post,
     web::{self, ServiceConfig},
-    HttpRequest, HttpResponse, Responder, Result,
+    Error, HttpRequest, HttpResponse, Responder, Result,
 };
+use actix_web_actors::ws;
 use askama::Template;
 use base64::{engine::general_purpose, Engine};
 use chrono::{DateTime, Datelike, NaiveTime, Utc, Weekday};
@@ -910,6 +912,36 @@ ORDER BY
     Ok(web::Json(json!(region_top_gifts)))
 }
 
+struct TableTennisWS {
+    served: bool,
+}
+
+impl Actor for TableTennisWS {
+    type Context = ws::WebsocketContext<Self>;
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TableTennisWS {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Text(text)) => {
+                dbg!(&text);
+                if text == "serve" {
+                    self.served = true;
+                } else if text == "ping" && self.served {
+                    ctx.text("pong")
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
+#[get("/19/ws/ping")]
+async fn day_19_ws(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
+    let resp = ws::start(TableTennisWS { served: false }, &req, stream);
+    resp
+}
+
 struct AppState {
     persist: PersistInstance,
     pool: PgPool,
@@ -951,6 +983,7 @@ async fn main(
         cfg.service(day_18_create_regions);
         cfg.service(day_18_regions_total);
         cfg.service(day_18_top_list);
+        cfg.service(day_19_ws);
 
         // 32MB
         cfg.app_data(web::PayloadConfig::new(1 << 25));
