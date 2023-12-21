@@ -19,6 +19,7 @@ mod day14;
 mod day15;
 mod day18;
 mod day19;
+mod day20;
 mod day4;
 mod day6;
 mod day7;
@@ -79,6 +80,8 @@ async fn main(
         cfg.service(day19::day_19_reset);
         cfg.service(day19::day_19_views);
         cfg.service(day19::day_19_chat);
+        cfg.service(day20::day_20_archive_files);
+        cfg.service(day20::day_20_archive_files_size);
 
         // 32MB
         cfg.app_data(web::PayloadConfig::new(1 << 25));
