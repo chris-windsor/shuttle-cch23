@@ -9,6 +9,7 @@ use actix_web::{
 use day19::ChatServer;
 use shuttle_actix_web::ShuttleActixWeb;
 use shuttle_persist::PersistInstance;
+use shuttle_secrets::SecretStore;
 use sqlx::PgPool;
 
 mod day1;
@@ -20,6 +21,7 @@ mod day15;
 mod day18;
 mod day19;
 mod day20;
+mod day21;
 mod day4;
 mod day6;
 mod day7;
@@ -35,15 +37,21 @@ async fn fake_error() -> impl Responder {
     HttpResponse::InternalServerError()
 }
 
+struct AppSecrets {
+    position_stack_api_key: String,
+}
+
 struct AppState {
     persist: PersistInstance,
     pool: PgPool,
+    secrets: AppSecrets,
 }
 
 #[shuttle_runtime::main]
 async fn main(
     #[shuttle_persist::Persist] persist: PersistInstance,
     #[shuttle_shared_db::Postgres] pool: PgPool,
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(base);
@@ -82,11 +90,21 @@ async fn main(
         cfg.service(day19::day_19_chat);
         cfg.service(day20::day_20_archive_files);
         cfg.service(day20::day_20_archive_files_size);
+        cfg.service(day21::day_21_coords);
+        cfg.service(day21::day_21_country);
 
         // 32MB
         cfg.app_data(web::PayloadConfig::new(1 << 25));
 
-        let app_data = web::Data::new(AppState { persist, pool });
+        let secrets = AppSecrets {
+            position_stack_api_key: secret_store.get("POSITION_STACK_API_KEY").unwrap(),
+        };
+
+        let app_data = web::Data::new(AppState {
+            persist,
+            pool,
+            secrets,
+        });
         cfg.app_data(app_data.clone());
 
         let ws_19_state = Arc::new(AtomicUsize::new(0));
