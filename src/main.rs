@@ -22,6 +22,7 @@ mod day18;
 mod day19;
 mod day20;
 mod day21;
+mod day22;
 mod day4;
 mod day6;
 mod day7;
@@ -92,6 +93,7 @@ async fn main(
         cfg.service(day20::day_20_archive_files_size);
         cfg.service(day21::day_21_coords);
         cfg.service(day21::day_21_country);
+        cfg.service(day22::day_22_integers);
 
         // 32MB
         cfg.app_data(web::PayloadConfig::new(1 << 25));
